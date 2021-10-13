@@ -128,7 +128,7 @@ int ff_hevc_decode_short_term_rps(GetBitContext *gb, AVCodecContext *avctx,
 
     if (rps != sps->st_rps && sps->nb_st_rps)
         rps_predict = get_bits1(gb);
-
+    av_log(stdout, AV_LOG_INFO, "Buffer index after reading rps_predict: %d %d byte %d bit %d \n", rps_predict, gb->index, gb->index/8, gb->index%8);
     if (rps_predict) {
         const ShortTermRPS *rps_ridx;
         int delta_rps;

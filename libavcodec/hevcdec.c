@@ -542,6 +542,7 @@ static int hls_slice_header(HEVCContext *s)
     GetBitContext *gb = &s->HEVClc->gb;
     SliceHeader *sh   = &s->sh;
     int i, ret;
+    av_log(stdout, AV_LOG_INFO, "Buffer index: %d %d %d\n", gb->index, gb->size_in_bits, gb->size_in_bits_plus8);
 
     // Coded parameters
     sh->first_slice_in_pic_flag = get_bits1(gb);
@@ -654,6 +655,7 @@ static int hls_slice_header(HEVCContext *s)
         sh->pic_output_flag = 1;
         if (s->ps.pps->output_flag_present_flag)
             sh->pic_output_flag = get_bits1(gb);
+        av_log(stdout, AV_LOG_INFO, "Buffer index after reading pic_output_flag: %d byte %d bit %d \n", gb->index, gb->index/8, gb->index%8);
 
         if (s->ps.sps->separate_colour_plane_flag)
             sh->colour_plane_id = get_bits(gb, 2);
@@ -673,6 +675,8 @@ static int hls_slice_header(HEVCContext *s)
             s->poc = poc;
 
             sh->short_term_ref_pic_set_sps_flag = get_bits1(gb);
+            av_log(stdout, AV_LOG_INFO, "Buffer index after reading short_term_ref_pic_set_sps_flag %d: %d byte %d bit %d \n", 
+                   sh->short_term_ref_pic_set_sps_flag, gb->index, gb->index/8, gb->index%8);
             pos = get_bits_left(gb);
             if (!sh->short_term_ref_pic_set_sps_flag) {
                 ret = ff_hevc_decode_short_term_rps(gb, s->avctx, &sh->slice_rps, s->ps.sps, 1);
@@ -694,6 +698,7 @@ static int hls_slice_header(HEVCContext *s)
             }
             sh->short_term_ref_pic_set_size = pos - get_bits_left(gb);
 
+            av_log(stdout, AV_LOG_INFO, "Buffer index before reading decode_lt_rps: %d byte %d bit %d \n", gb->index, gb->index/8, gb->index%8);
             pos = get_bits_left(gb);
             ret = decode_lt_rps(s, &sh->long_term_rps, gb);
             if (ret < 0) {
@@ -712,6 +717,7 @@ static int hls_slice_header(HEVCContext *s)
             s->poc               = 0;
         }
 
+        av_log(stdout, AV_LOG_INFO, "Buffer index before reading slice_sample_adaptive_offset_flag: %d byte %d bit %d \n", gb->index, gb->index/8, gb->index%8);
         /* 8.3.1 */
         if (sh->first_slice_in_pic_flag && s->temporal_id == 0 &&
             s->nal_unit_type != HEVC_NAL_TRAIL_N &&
@@ -818,6 +824,7 @@ static int hls_slice_header(HEVCContext *s)
             }
         }
 
+        av_log(stdout, AV_LOG_INFO, "Buffer index before reading slice_qp_delta: %d byte %d bit %d\n", gb->index, gb->index/8, gb->index%8);
         sh->slice_qp_delta = get_se_golomb(gb);
 
         if (s->ps.pps->pic_slice_level_chroma_qp_offsets_present_flag) {
@@ -885,7 +892,10 @@ static int hls_slice_header(HEVCContext *s)
 
     sh->num_entry_point_offsets = 0;
     if (s->ps.pps->tiles_enabled_flag || s->ps.pps->entropy_coding_sync_enabled_flag) {
+        av_log(stdout, AV_LOG_INFO, "Buffer index before reading num entry point offsets: %d byte %d bit %d\n", 
+                gb->index, gb->index/8, gb->index%8);
         unsigned num_entry_point_offsets = get_ue_golomb_long(gb);
+        av_log(stdout, AV_LOG_ERROR, "num_entry_point_offsets %d \n", num_entry_point_offsets);
         // It would be possible to bound this tighter but this here is simpler
         if (num_entry_point_offsets > get_bits_left(gb)) {
             av_log(s->avctx, AV_LOG_ERROR, "num_entry_point_offsets %d is invalid\n", num_entry_point_offsets);
